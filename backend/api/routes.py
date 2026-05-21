@@ -27,6 +27,17 @@ async def predict_cate(request: PredictCATERequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/predict_cate_grf", response_model=PredictCATEResponse)
+async def predict_cate_grf(request: PredictCATERequest):
+    try:
+        df = pd.DataFrame([f.model_dump() for f in request.features])
+        result = causal_service.predict_cate_grf_with_meta(df)
+        return PredictCATEResponse(**result)
+    except Exception as e:
+        logger.exception("Error in /predict_cate_grf")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/simulate_intervention", response_model=SimulateInterventionResponse)
 async def simulate_intervention(request: SimulateInterventionRequest):
     try:
