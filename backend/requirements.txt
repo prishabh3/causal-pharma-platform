@@ -8,7 +8,7 @@ scikit-learn==1.4.1.post1
 xgboost==2.0.3
 # Causal ML — econml 0.15.1 requires shap>=0.38.1,<0.44.0
 econml==0.15.1
-dowhy==0.11.1
+dowhy==0.14
 # Explainability — pinned to satisfy econml's constraint (shap<0.44.0)
 shap==0.43.0
 # Model tracking
@@ -23,3 +23,5 @@ scipy==1.12.0
 httpx==0.26.0
 # Testing
 pytest==8.0.0
+# R integration
+rpy2==3.5.14
