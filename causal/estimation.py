@@ -27,6 +27,58 @@ from xgboost import XGBRegressor
 logger = logging.getLogger(__name__)
 
 
+from sklearn.model_selection import KFold, cross_val_predict
+from sklearn.linear_model import LogisticRegression, LinearRegression
+
+class CustomDRLearner:
+    def __init__(self, random_state=42):
+        self.random_state = random_state
+        self.prop_model = LogisticRegression(max_iter=1000, solver="lbfgs")
+
+    def fit(self, Y, T, X, W=None):
+        n = len(Y)
+        e = cross_val_predict(self.prop_model, X, T, cv=5, method='predict_proba')[:, 1]
+        
+        clipped_mask = (e < 0.05) | (e > 0.95)
+        num_clipped = clipped_mask.sum()
+        if num_clipped > 0:
+            print(f"Warning: {num_clipped} units had extreme propensity scores and were clipped.")
+            
+        e = np.clip(e, 0.05, 0.95)
+        
+        mu1 = np.zeros(n)
+        mu0 = np.zeros(n)
+        kf = KFold(n_splits=5, shuffle=True, random_state=self.random_state)
+        for train_idx, test_idx in kf.split(X):
+            X_train, Y_train, T_train = X[train_idx], Y[train_idx], T[train_idx]
+            X_test = X[test_idx]
+            
+            mask1 = T_train == 1
+            if mask1.sum() > 0:
+                mod1 = LinearRegression()
+                mod1.fit(X_train[mask1], Y_train[mask1])
+                mu1[test_idx] = mod1.predict(X_test)
+            else:
+                mu1[test_idx] = 0
+                
+            mask0 = T_train == 0
+            if mask0.sum() > 0:
+                mod0 = LinearRegression()
+                mod0.fit(X_train[mask0], Y_train[mask0])
+                mu0[test_idx] = mod0.predict(X_test)
+            else:
+                mu0[test_idx] = 0
+                
+        dr_i = mu1 - mu0 + T * (Y - mu1) / e - (1 - T) * (Y - mu0) / (1 - e)
+        
+        self.dr_ate_ = np.mean(dr_i)
+        self.cate_model = LinearRegression()
+        self.cate_model.fit(X, dr_i)
+        return self
+
+    def effect(self, X):
+        return self.cate_model.predict(X)
+
 class CausalEstimator:
     """
     Unified wrapper for causal treatment effect estimators.
@@ -59,13 +111,7 @@ class CausalEstimator:
         Y = np.array(Y).astype(float)
 
         if self.method == "doubly_robust":
-            self.model = LinearDRLearner(
-                model_propensity=LogisticRegression(max_iter=1000, solver="lbfgs"),
-                model_regression=XGBRegressor(
-                    n_estimators=100, max_depth=3, eval_metric="rmse", verbosity=0
-                ),
-                random_state=42,
-            )
+            self.model = CustomDRLearner(random_state=42)
             self._supports_W = True
 
         elif self.method == "r_learner":

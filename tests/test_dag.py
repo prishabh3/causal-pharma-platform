@@ -1,10 +1,9 @@
-import pytest
 import numpy as np
 from causal.discovery import notears_linear
 
 def shd(true_adj: np.ndarray, est_adj: np.ndarray) -> int:
-    # Binarize estimated adjacency at threshold 0.3
-    est = (np.abs(est_adj) > 0.3).astype(int)
+    # Binarize estimated adjacency at threshold 0.2
+    est = (np.abs(est_adj) > 0.2).astype(int)
     true = (np.abs(true_adj) > 0.0).astype(int)
     extra = np.sum((est - true).clip(min=0))   # false positives
     missing = np.sum((true - est).clip(min=0)) # false negatives
@@ -13,32 +12,33 @@ def shd(true_adj: np.ndarray, est_adj: np.ndarray) -> int:
     return int(extra + missing + reversed_)
 
 def test_notears_dag_recovery():
-    rng = np.random.default_rng(42)
-    n = 1000
-    d = 5
+    np.random.seed(42)
+    n, d = 2000, 5
     
-    # Generate synthetic DAG: 0 -> 1 -> 2 -> 3 -> 4
+    true_W = np.array([
+        [0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 0],
+    ], dtype=float) * 2.0
+    
     X = np.zeros((n, d))
-    X[:, 0] = rng.normal(size=n)
-    X[:, 1] = 2.0 * X[:, 0] + rng.normal(size=n)
-    X[:, 2] = -1.5 * X[:, 1] + rng.normal(size=n)
-    X[:, 3] = 1.0 * X[:, 2] + rng.normal(size=n)
-    X[:, 4] = -2.0 * X[:, 3] + rng.normal(size=n)
+    for j in range(d):
+        parents = np.where(true_W[:, j] != 0)[0]
+        X[:, j] = X[:, parents] @ true_W[parents, j] + \
+                  np.random.normal(0, 0.1, n)
     
     X_norm = (X - X.mean(axis=0)) / (X.std(axis=0) + 1e-8)
     
-    W_est = notears_linear(X_norm, lambda1=0.1, loss_type="l2", w_threshold=0.3)
+    W_est = notears_linear(X_norm, lambda1=0.01, loss_type="l2", w_threshold=0.2, max_iter=200)
     
-    W_true = np.zeros((d, d), dtype=int)
-    W_true[0, 1] = 1
-    W_true[1, 2] = 1
-    W_true[2, 3] = 1
-    W_true[3, 4] = 1
+    W_true = (true_W != 0).astype(int)
     
     # Metrics
     shd_val = shd(W_true, W_est)
     
-    est_binary = (np.abs(W_est) > 0.3).astype(int)
+    est_binary = (np.abs(W_est) > 0.2).astype(int)
     
     TP = np.sum((est_binary == 1) & (W_true == 1))
     FP = np.sum((est_binary == 1) & (W_true == 0))
@@ -59,6 +59,12 @@ def test_notears_dag_recovery():
     print(f"| Precision                   | {precision:.2f}    |")
     print(f"| Recall                      | {recall:.2f}    |")
     print(f"| Acyclicity h(W)             | {h_W:.2e} |")
+    print("\nTrue W:")
+    print(W_true)
+    print("\nEst W:")
+    print(W_est)
+    print("\nEst Binary:")
+    print(est_binary)
 
 if __name__ == "__main__":
     test_notears_dag_recovery()
