@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(16px); border: 1px solid rgba(15, 23, 42, 0.08); }
+        body { font-family: 'Inter', sans-serif; background-color: transparent; }
+</style>
+<script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff", "secondary": "#6b38d4", "surface-tint": "#565e74",
+                    "surface-container-low": "#f2f4f6", "primary-fixed-dim": "#bec6e0", "outline": "#76777d",
+                    "inverse-surface": "#2d3133", "surface-bright": "#f7f9fb", "surface": "#f7f9fb",
+                    "primary": "#000000", "on-surface-variant": "#45464d", "on-surface": "#191c1e",
+                    "surface-container": "#eceef0", "on-background": "#191c1e", "surface-variant": "#e0e3e5",
+                    "outline-variant": "#c6c6cd", "background": "#f7f9fb", "surface-container-high": "#e6e8ea"
+            },
+            "fontFamily": { "data-mono": ["JetBrains Mono"], "headline-md": ["Inter"], "headline-lg": ["Inter"], "headline-sm": ["Inter"], "body-md": ["Inter"], "label-caps": ["Inter"] }
+          }
+        }
+      }
+</script>
+</head>
+<body class="bg-transparent text-on-surface p-4">
+
+<!-- Header Section -->
+<header class="mb-8">
+<h1 class="text-headline-lg font-headline-lg text-primary">Treatment Analysis Results</h1>
+<p class="text-on-surface-variant font-medium flex items-center gap-2 mt-1">
+<span class="bg-surface-container-high px-2 py-0.5 rounded text-body-sm">ID: {{ PATIENT_ID }}</span>
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+<span class="text-body-sm">Stable</span>
+</p>
+</header>
+
+<!-- Top Row Metrics -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+<div class="glass-panel p-5 rounded-xl">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-2">AVERAGE TREATMENT EFFECT</p>
+<p class="text-headline-md font-headline-md text-primary font-bold">{{ ATE_VAL }}</p>
+<p class="text-body-sm text-green-600 font-medium mt-1">Expected improvement</p>
+</div>
+<div class="glass-panel p-5 rounded-xl">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-2">INDIVIDUAL CATE</p>
+<p class="text-headline-md font-headline-md {{ CATE_COLOR }} font-bold">{{ CATE_VAL }}</p>
+<div class="flex items-center gap-2 mt-2">
+<span class="w-2 h-2 rounded-full {{ CATE_BG }}"></span>
+<span class="text-body-sm font-medium">95% CI: [{{ CATE_LOWER }}, {{ CATE_UPPER }}]</span>
+</div>
+</div>
+<div class="bg-[#0f172a] p-5 rounded-xl shadow-lg">
+<p class="text-label-caps font-label-caps text-slate-400 mb-2">POLICY RECOMMENDATION</p>
+<p class="text-headline-lg font-headline-lg text-white font-extrabold tracking-tight">{{ REC_LABEL }}</p>
+<p class="text-body-sm text-slate-300 mt-1">High clinical utility</p>
+</div>
+<div class="glass-panel p-5 rounded-xl">
+<p class="text-label-caps font-label-caps text-on-surface-variant mb-2">MODEL CONFIDENCE</p>
+<p class="text-headline-md font-headline-md text-primary font-bold">{{ CONFIDENCE_PCT }}%</p>
+<div class="w-full h-1.5 bg-surface-container-high rounded-full mt-3 overflow-hidden">
+<div class="h-full bg-secondary" style="width: {{ CONFIDENCE_WIDTH }}%"></div>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-2">Based on training-data uncertainty (approximate)</p>
+</div>
+</div>
+
+<!-- Middle Row: Comparison -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+<section class="md:col-span-12 glass-panel rounded-xl overflow-hidden flex flex-col h-[280px]">
+<div class="px-5 py-4 border-b border-outline-variant/30">
+<h2 class="text-headline-sm font-headline-sm text-primary">Treatment Comparison</h2>
+</div>
+<div class="p-8 flex flex-col justify-center gap-12 flex-1">
+<!-- Control Row -->
+<div class="space-y-3">
+<div class="flex justify-between items-end">
+<span class="text-label-caps font-label-caps text-on-surface-variant">CONTROL GROUP</span>
+<span class="text-headline-sm font-data-mono text-primary">{{ CONTROL_VAL }}</span>
+</div>
+<div class="w-full h-8 bg-surface-container-high rounded-lg overflow-hidden flex items-center px-4">
+<div class="h-4 bg-slate-400 rounded-full" style="width: {{ CONTROL_WIDTH }}%"></div>
+</div>
+</div>
+<!-- Treated Row -->
+<div class="space-y-3">
+<div class="flex justify-between items-end">
+<span class="text-label-caps font-label-caps text-secondary">TREATED GROUP</span>
+<span class="text-headline-sm font-data-mono text-secondary">{{ TREATED_VAL }}</span>
+</div>
+<div class="w-full h-8 bg-secondary/10 rounded-lg overflow-hidden flex items-center px-4 border border-secondary/20">
+<div class="h-4 bg-secondary rounded-full shadow-[0_0_15px_rgba(107,56,212,0.3)]" style="width: {{ TREATED_WIDTH }}%"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+
+<!-- Bottom Row: Table -->
+<section class="glass-panel rounded-xl overflow-hidden mb-8">
+<div class="px-5 py-4 border-b border-outline-variant/30 bg-surface-bright flex items-center justify-between">
+<h2 class="text-headline-sm font-headline-sm text-primary">Treatment Effect Analysis</h2>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant/30">
+<th class="px-6 py-3 text-label-caps font-label-caps text-on-surface-variant tracking-wider">FEATURE</th>
+<th class="px-6 py-3 text-label-caps font-label-caps text-on-surface-variant tracking-wider">VALUE</th>
+<th class="px-6 py-3 text-label-caps font-label-caps text-on-surface-variant tracking-wider">DIRECTION</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/20">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-medium text-primary">Age</td>
+<td class="px-6 py-4 font-data-mono text-primary">{{ AGE_VAL }}</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 text-green-600 font-semibold text-body-sm">
+<span class="material-symbols-outlined text-[16px]">arrow_upward</span> Positive
+</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-medium text-primary">Blood Pressure</td>
+<td class="px-6 py-4 font-data-mono text-primary">{{ BP_VAL }}</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 text-red-600 font-semibold text-body-sm">
+<span class="material-symbols-outlined text-[16px]">arrow_downward</span> Negative
+</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-6 py-4 font-medium text-primary">Comorbidities</td>
+<td class="px-6 py-4 font-data-mono text-primary">{{ COMORB_VAL }}</td>
+<td class="px-6 py-4">
+<span class="inline-flex items-center gap-1.5 text-red-600 font-semibold text-body-sm">
+<span class="material-symbols-outlined text-[16px]">arrow_downward</span> Negative
+</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+</body></html>

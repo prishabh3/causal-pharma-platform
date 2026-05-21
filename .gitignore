@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.venv
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Streamlit
+.streamlit/credentials.toml
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
