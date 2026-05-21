@@ -24,15 +24,34 @@ A healthcare analytics platform for **causal treatment effect estimation**, **po
 
 ## Getting Started
 
+Follow these steps to run the platform locally on your machine using Docker.
+
+**1. Clone the repository**
+```bash
+git clone https://github.com/prishabh3/casual-pharma-platform.git
+cd casual-pharma-platform
+```
+
+**2. Build and start the Docker containers**
 ```bash
 docker-compose up --build
 ```
+*Note: The first time you run this, it may take a few minutes to download the base images and install dependencies.*
+
+**3. Access the Services**
+Once the terminal shows that the services have started, open your web browser and navigate to:
 
 | Service | URL |
 |---------|-----|
 | Streamlit UI | http://localhost:8501 |
 | API docs | http://localhost:8000/docs |
 | MLflow | http://localhost:5001 |
+
+**4. Stopping the platform**
+To stop the platform, simply press `Ctrl+C` in the terminal where it is running, or execute:
+```bash
+docker-compose down
+```
 
 ## API Endpoints
 
