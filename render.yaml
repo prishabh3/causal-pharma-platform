@@ -1,0 +1,70 @@
+version: "1"
+
+services:
+  # 1. FastAPI Backend
+  - type: web
+    name: causal-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: causal-db
+          property: connectionString
+      - key: MLFLOW_TRACKING_URI
+        fromService:
+          type: pserv
+          name: causal-mlflow
+          property: hostport
+        # Note: Render private services are accessed via http://<name>:<port> internally
+      - key: PYTHONUNBUFFERED
+        value: "1"
+
+  # 2. MLflow Tracking Server (Private Service)
+  - type: pserv
+    name: causal-mlflow
+    env: docker
+    dockerfilePath: backend/Dockerfile # Placeholder, needs custom definition if not provided
+    # Wait, MLflow uses ghcr.io/mlflow/mlflow in docker-compose. 
+    # Render requires a Dockerfile to build custom images or we can specify `image`.
+    image:
+      url: ghcr.io/mlflow/mlflow:v2.10.2
+    plan: starter
+    disk:
+      name: mlflow-artifacts
+      mountPath: /mlflow/artifacts
+      sizeGB: 1
+    startCommand: >
+      sh -c "pip install psycopg2-binary --quiet &&
+             mlflow server
+               --host 0.0.0.0
+               --port 5000
+               --backend-store-uri $DATABASE_URL
+               --default-artifact-root /mlflow/artifacts"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: causal-db
+          property: connectionString
+
+  # 3. Streamlit Frontend
+  - type: web
+    name: causal-frontend
+    env: docker
+    dockerfilePath: frontend/Dockerfile
+    plan: starter
+    envVars:
+      - key: BACKEND_URL
+        fromService:
+          type: web
+          name: causal-backend
+          property: url
+
+databases:
+  # 4. PostgreSQL Database
+  - name: causal-db
+    plan: starter
+    databaseName: causal_db
+    user: causal_user
