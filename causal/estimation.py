@@ -28,56 +28,81 @@ logger = logging.getLogger(__name__)
 
 
 from sklearn.model_selection import KFold, cross_val_predict
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 class CustomDRLearner:
+    """
+    Cross-fitting Doubly Robust estimator.
+
+    Improvements over naive DR:
+      1. Features are standardized inside each fold (prevents LBFGS divergence).
+      2. Ridge regression for outcome models (less overfitting on small samples).
+      3. Propensity clipping at [0.05, 0.95].
+      4. Formula: dr_i = (mu1 - mu0) + T*(Y-mu1)/e - (1-T)*(Y-mu0)/(1-e)
+    """
     def __init__(self, random_state=42):
         self.random_state = random_state
-        self.prop_model = LogisticRegression(max_iter=1000, solver="lbfgs")
+        # Pipeline: scale then fit logistic — prevents lbfgs convergence warnings
+        self.prop_pipe = Pipeline([
+            ("scaler", StandardScaler()),
+            ("lr", LogisticRegression(max_iter=2000, solver="lbfgs", C=1.0)),
+        ])
 
     def fit(self, Y, T, X, W=None):
         n = len(Y)
-        e = cross_val_predict(self.prop_model, X, T, cv=5, method='predict_proba')[:, 1]
-        
-        clipped_mask = (e < 0.05) | (e > 0.95)
-        num_clipped = clipped_mask.sum()
+        e = cross_val_predict(
+            self.prop_pipe, X, T, cv=5, method="predict_proba"
+        )[:, 1]
+
+        num_clipped = int(((e < 0.05) | (e > 0.95)).sum())
         if num_clipped > 0:
             print(f"Warning: {num_clipped} units had extreme propensity scores and were clipped.")
-            
+
         e = np.clip(e, 0.05, 0.95)
-        
+
         mu1 = np.zeros(n)
         mu0 = np.zeros(n)
         kf = KFold(n_splits=5, shuffle=True, random_state=self.random_state)
         for train_idx, test_idx in kf.split(X):
             X_train, Y_train, T_train = X[train_idx], Y[train_idx], T[train_idx]
             X_test = X[test_idx]
-            
+
+            # Standardize inside fold (prevents scale sensitivity in Ridge)
+            scaler = StandardScaler().fit(X_train)
+            X_tr_s = scaler.transform(X_train)
+            X_te_s = scaler.transform(X_test)
+
             mask1 = T_train == 1
             if mask1.sum() > 0:
-                mod1 = LinearRegression()
-                mod1.fit(X_train[mask1], Y_train[mask1])
-                mu1[test_idx] = mod1.predict(X_test)
+                mod1 = Ridge(alpha=1.0)
+                mod1.fit(X_tr_s[mask1], Y_train[mask1])
+                mu1[test_idx] = mod1.predict(X_te_s)
             else:
-                mu1[test_idx] = 0
-                
+                mu1[test_idx] = Y_train[T_train == 1].mean() if (T_train == 1).any() else 0.0
+
             mask0 = T_train == 0
             if mask0.sum() > 0:
-                mod0 = LinearRegression()
-                mod0.fit(X_train[mask0], Y_train[mask0])
-                mu0[test_idx] = mod0.predict(X_test)
+                mod0 = Ridge(alpha=1.0)
+                mod0.fit(X_tr_s[mask0], Y_train[mask0])
+                mu0[test_idx] = mod0.predict(X_te_s)
             else:
-                mu0[test_idx] = 0
-                
-        dr_i = mu1 - mu0 + T * (Y - mu1) / e - (1 - T) * (Y - mu0) / (1 - e)
-        
-        self.dr_ate_ = np.mean(dr_i)
-        self.cate_model = LinearRegression()
-        self.cate_model.fit(X, dr_i)
+                mu0[test_idx] = Y_train[T_train == 0].mean() if (T_train == 0).any() else 0.0
+
+        # Augmented IPW (doubly-robust) scores
+        dr_i = (mu1 - mu0) + T * (Y - mu1) / e - (1 - T) * (Y - mu0) / (1 - e)
+
+        self.dr_ate_ = float(np.mean(dr_i))
+        self.cate_model = Ridge(alpha=1.0)
+        # Fit CATE model on standardized X
+        self._cate_scaler = StandardScaler().fit(X)
+        self.cate_model.fit(self._cate_scaler.transform(X), dr_i)
         return self
 
     def effect(self, X):
-        return self.cate_model.predict(X)
+        return self.cate_model.predict(self._cate_scaler.transform(X))
+
 
 class CausalEstimator:
     """

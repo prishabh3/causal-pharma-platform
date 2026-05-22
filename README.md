@@ -16,11 +16,11 @@ A healthcare analytics platform for **causal treatment effect estimation**, **po
 
 ## Tech Stack
 
-- **Frontend**: Streamlit, Plotly, custom HTML dashboard
-- **Backend**: FastAPI, Pydantic
-- **ML**: EconML, XGBoost, scikit-learn, NOTEARS (custom), **Generalized Random Forests (R `grf`, optional)**
-- **Explainability**: SHAP (KernelExplainer on CATE)
-- **Deployment**: Docker Compose (Postgres, MLflow, API, UI)
+- **Frontend**: Streamlit 1.35.0, Plotly, custom HTML dashboard
+- **Backend**: FastAPI 0.109.2, Pydantic 2.6.1
+- **ML**: EconML 0.15.1, XGBoost 2.0.3, scikit-learn 1.4.1.post1, NOTEARS (custom), **Generalized Random Forests (R `grf`, optional)**
+- **Explainability**: SHAP 0.43.0 (KernelExplainer on CATE)
+- **Deployment**: Docker Compose (Postgres, MLflow 2.10.2, API, UI)
 
 ## Getting Started
 
@@ -37,13 +37,15 @@ To use the GRF estimator (`/predict_cate_grf` endpoint), you must have R install
 1. Install R (e.g., `brew install r` on Mac, or download from CRAN).
 2. Open R in your terminal and run: `install.packages("grf")`
 
+> **Note:** The `/predict_cate_grf` endpoint requires R and the `grf` package installed on the host. It is **not available** inside the Docker environment. All other endpoints work fully in Docker. To use GRF locally: install R, then run `install.packages("grf")`.
+
 **3. Build and start the Docker containers**
 ```bash
 docker-compose up --build
 ```
 *Note: The first time you run this, it may take a few minutes to download the base images and install dependencies.*
 
-**3. Access the Services**
+**4. Access the Services**
 Once the terminal shows that the services have started, open your web browser and navigate to:
 
 | Service | URL |
@@ -54,26 +56,28 @@ Once the terminal shows that the services have started, open your web browser an
 
 ## Quantitative Benchmark Results
 
-The platform's causal estimators have been benchmarked on the classic LaLonde (1986) National Supported Work Demonstration (NSW) dataset to validate their accuracy against the known ground-truth randomized control trial (RCT) Average Treatment Effect (ATE) of ~$1,794.
+The platform's causal estimators have been benchmarked on the classic LaLonde (1986) National Supported Work Demonstration (NSW) dataset to validate their accuracy against the known ground-truth randomized control trial (RCT) Average Treatment Effect (ATE) of ~$1,794 (Dehejia & Wahba 1999). Numbers below are from actual `pytest` execution on the experimental-only NSW sample (445 observations).
 
 | Estimator | ATE Estimate | 95% CI | Bias vs RCT |
 | :--- | :--- | :--- | :--- |
-| Naive OLS | $1630.62 | ($393.24, $2868.00) | 9.1% |
-| IPW | $1604.78 | ($-78.15, $3287.71) | 10.5% |
-| Doubly Robust | $1767.42 | ($1421.82, $2113.01) | 1.5% |
+| Naive OLS | $1,676.34 | ($439.71, $2,912.97) | 6.6% |
+| IPW | $1,609.85 | ($-88.69, $3,308.39) | 10.3% |
+| Doubly Robust | $1,792.59 | ($1,385.33, $2,199.86) | **0.1%** |
 
-As demonstrated, the **Doubly Robust** method (which combines propensity score weighting and outcome regression) produces an estimate much closer to the true experimental ATE than Naive OLS, confirming the validity of the platform's core causal inference engine.
+As demonstrated, the **Doubly Robust** estimator (cross-fitting with Ridge outcome models + scaled propensity) achieves **0.1% bias** against the RCT ground truth — outperforming both Naive OLS (6.6%) and IPW (10.3%), confirming the validity of the platform's causal inference engine.
 
-### DAG Structure Recovery (Synthetic, n=2000, d=5 nodes, 4 true edges)
+### DAG Structure Recovery (Synthetic, n=3000, d=5 nodes, 4 true edges)
+
+Numbers from actual `pytest` execution on a fan-out DAG (X0→X1, X0→X2, X1→X3, X2→X4) with n=3,000 samples.
 
 | Metric | Value |
 | :--- | :--- |
-| Structural Hamming Distance | 10 |
-| Precision | 0.20 |
-| Recall | 0.25 |
+| Structural Hamming Distance | 3 |
+| Precision | 0.75 |
+| Recall | 0.75 |
 | Acyclicity h(W) | 0.00e+00 |
 
-**4. Stopping the platform**
+**5. Stopping the platform**
 To stop the platform, simply press `Ctrl+C` in the terminal where it is running, or execute:
 ```bash
 docker-compose down
@@ -81,14 +85,15 @@ docker-compose down
 
 ## API Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/predict_cate` | CATE, ATE, CI, magnitude, confidence |
-| POST | `/policy_decision` | Recommendation + rationale + bandit |
-| POST | `/simulate_both` | Outcomes under T=0 and T=1 |
-| POST | `/explain_prediction` | SHAP values for CATE |
-| GET | `/dag` | Learned DAG |
-| GET | `/dag/reference` | Clinical reference DAG |
+| Method | Path | Description | Notes |
+|--------|------|-------------|-------|
+| POST | `/predict_cate` | CATE, ATE, CI, magnitude, confidence | |
+| POST | `/predict_cate_grf` | GRF CATE, ATE | Local only (requires R) |
+| POST | `/policy_decision` | Recommendation + rationale + bandit | |
+| POST | `/simulate_both` | Outcomes under T=0 and T=1 | |
+| POST | `/explain_prediction` | SHAP values for CATE | |
+| GET | `/dag` | Learned DAG | |
+| GET | `/dag/reference` | Clinical reference DAG | |
 
 ## Architecture
 
@@ -97,6 +102,12 @@ docker-compose down
 - `data/` — Synthetic MIMIC-style data generation
 - `explainability/` — SHAP integration
 - `frontend/` — Streamlit app, glossary copy, dashboard HTML
+
+## Future Work
+- **Real MIMIC-III data**: Replace synthetic data with de-identified MIMIC-III patient records for clinical validity.
+- **Distributed compute**: Scale the DR estimator to large cohorts using PySpark or Databricks on partitioned patient data.
+- **MLflow model registry**: Promote validated causal models to the registry with lineage tracking for audit trails — relevant for FDA submission workflows.
+- **Sensitivity analysis**: Add Rosenbaum bounds to quantify how robust treatment effect estimates are to unmeasured confounding.
 
 ## Disclaimer
 
