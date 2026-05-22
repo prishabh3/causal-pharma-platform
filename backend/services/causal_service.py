@@ -4,8 +4,7 @@ import pandas as pd
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-from config import DATA_SOURCE
+DATA_SOURCE = os.getenv("DATA_SOURCE", "synthetic")
 
 from causal.estimation import CausalEstimator
 from causal.discovery import notears_linear, get_dag_from_w
