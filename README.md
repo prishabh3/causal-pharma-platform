@@ -18,7 +18,8 @@ A healthcare analytics platform for **causal treatment effect estimation**, **po
 
 - **Frontend**: Streamlit 1.35.0, Plotly, custom HTML dashboard
 - **Backend**: FastAPI 0.109.2, Pydantic 2.6.1
-- **ML**: EconML 0.15.1, XGBoost 2.0.3, scikit-learn 1.4.1.post1, NOTEARS (custom), **Generalized Random Forests (R `grf`, optional)**
+- **ML**: EconML 0.15.1, XGBoost 2.0.3, scikit-learn 1.4.1, 
+  NOTEARS (custom), Generalized Random Forests (R `grf`, optional)
 - **Explainability**: SHAP 0.43.0 (KernelExplainer on CATE)
 - **Deployment**: Docker Compose (Postgres, MLflow 2.10.2, API, UI)
 
@@ -58,16 +59,15 @@ Once the terminal shows that the services have started, open your web browser an
 
 The platform's causal estimators have been benchmarked on the classic LaLonde (1986) National Supported Work Demonstration (NSW) dataset to validate their accuracy against the known ground-truth randomized control trial (RCT) Average Treatment Effect (ATE) of ~$1,794 (Dehejia & Wahba 1999). Numbers below are from actual `pytest` execution on the experimental-only NSW sample (445 observations).
 
-| Estimator | ATE Estimate | 95% CI | Bias vs RCT |
-| :--- | :--- | :--- | :--- |
-| Naive OLS | $1,676.34 | ($439.71, $2,912.97) | 6.6% |
-| IPW | $1,609.85 | ($-88.69, $3,308.39) | 10.3% |
-| Doubly Robust | $1,792.59 | ($1,385.33, $2,199.86) | **0.1%** |
+| Estimator     | ATE Estimate | 95% CI                       | Bias vs RCT |
+|---------------|-------------|------------------------------|-------------|
+| Naive OLS     | $1,676.34   | ($439.71, $2,912.97)         | 6.6%        |
+| IPW           | $1,609.85   | ($-88.69, $3,308.39)         | 10.3%       |
+| Doubly Robust | $1,792.59   | ($1,385.33, $2,199.86)       | **0.1%**    |
 
-*Note: IPW shows a wide confidence interval ($-88.69, $3,308.39) due to 
-near-extreme propensity scores at the boundary of the small experimental 
-sample (n=445) — this is expected behaviour for IPW on low-overlap data, 
-not a data or implementation error.*
+*Note: IPW shows a wide confidence interval due to near-extreme propensity
+scores at the boundary of the small experimental sample (n=445) — expected
+behaviour for IPW on low-overlap data, not a data or implementation error.*
 
 As demonstrated, the **Doubly Robust** estimator (cross-fitting with Ridge outcome models + scaled propensity) achieves **0.1% bias** against the RCT ground truth — outperforming both Naive OLS (6.6%) and IPW (10.3%), confirming the validity of the platform's causal inference engine.
 
@@ -75,12 +75,12 @@ As demonstrated, the **Doubly Robust** estimator (cross-fitting with Ridge outco
 
 Numbers from actual `pytest` execution on a fan-out DAG (X0→X1, X0→X2, X1→X3, X2→X4) with n=3,000 samples.
 
-| Metric | Value |
-| :--- | :--- |
-| Structural Hamming Distance | 3 |
-| Precision | 0.75 |
-| Recall | 0.75 |
-| Acyclicity h(W) | 0.00e+00 |
+| Metric                      | Value    |
+|-----------------------------|----------|
+| Structural Hamming Distance | 3        |
+| Precision                   | 0.75     |
+| Recall                      | 0.75     |
+| Acyclicity h(W)             | 0.00e+00 |
 
 **5. Stopping the platform**
 To stop the platform, simply press `Ctrl+C` in the terminal where it is running, or execute:
@@ -90,15 +90,15 @@ docker-compose down
 
 ## API Endpoints
 
-| Method | Path | Description | Notes |
-|--------|------|-------------|-------|
-| POST | `/predict_cate` | CATE, ATE, CI, magnitude, confidence | |
-| POST | `/predict_cate_grf` | GRF CATE, ATE | Local only (requires R) |
-| POST | `/policy_decision` | Recommendation + rationale + bandit | |
-| POST | `/simulate_both` | Outcomes under T=0 and T=1 | |
-| POST | `/explain_prediction` | SHAP values for CATE | |
-| GET | `/dag` | Learned DAG | |
-| GET | `/dag/reference` | Clinical reference DAG | |
+| Method | Path                  | Description                          | Notes               |
+|--------|-----------------------|--------------------------------------|---------------------|
+| POST   | `/predict_cate`       | CATE, ATE, CI, magnitude, confidence |                     |
+| POST   | `/predict_cate_grf`   | GRF CATE, ATE                        | Local only (needs R)|
+| POST   | `/policy_decision`    | Recommendation + rationale + bandit  |                     |
+| POST   | `/simulate_both`      | Outcomes under T=0 and T=1           |                     |
+| POST   | `/explain_prediction` | SHAP values for CATE                 |                     |
+| GET    | `/dag`                | Learned DAG                          |                     |
+| GET    | `/dag/reference`      | Clinical reference DAG               |                     |
 
 ## Architecture
 
@@ -109,10 +109,15 @@ docker-compose down
 - `frontend/` — Streamlit app, glossary copy, dashboard HTML
 
 ## Future Work
-- **Real MIMIC-III data**: Replace synthetic data with de-identified MIMIC-III patient records for clinical validity.
-- **Distributed compute**: Scale the DR estimator to large cohorts using PySpark or Databricks on partitioned patient data.
-- **MLflow model registry**: Promote validated causal models to the registry with lineage tracking for audit trails — relevant for FDA submission workflows.
-- **Sensitivity analysis**: Add Rosenbaum bounds to quantify how robust treatment effect estimates are to unmeasured confounding.
+- **Real MIMIC-III data**: Replace synthetic data with de-identified
+  MIMIC-III patient records for clinical validity.
+- **Distributed compute**: Scale the DR estimator to large cohorts
+  using PySpark or Databricks on partitioned patient data.
+- **MLflow model registry**: Promote validated causal models to the
+  registry with lineage tracking for audit trails — relevant for
+  FDA submission workflows.
+- **Sensitivity analysis**: Add Rosenbaum bounds to quantify how
+  robust treatment effect estimates are to unmeasured confounding.
 
 ## Disclaimer
 
