@@ -23,7 +23,7 @@ def synthetic_data():
     
     logit_p = -2.0 + 0.05*(age-65) - 0.02*(bp-120) + 0.5*comorb
     p_t = np.clip(1.0 / (1.0 + np.exp(-logit_p)), 0.01, 0.99)
-    T = rng.binomial(1, p_t)
+    T = rng.binomial(1, p_t).astype(int)
     
     true_cate = 5.0 + 0.2*(age-65) - 1.5*comorb
     Y0 = 50.0 - 0.3*(age-65) + 0.1*(bp-120) - 2.0*comorb

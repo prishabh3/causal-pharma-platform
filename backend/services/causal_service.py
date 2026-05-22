@@ -126,8 +126,8 @@ class CausalService:
                 self.grf_estimator = GRFEstimator()
                 self.grf_estimator.fit(Y, T, X=X)
                 logger.info("GRF model fitting complete.")
-            except ImportError as e:
-                logger.warning(f"Skipping GRF model fitting: {e}")
+            except Exception as e:
+                logger.warning(f"Skipping GRF model fitting: {type(e).__name__}: {e}")
                 self.grf_estimator = None
                 
         except Exception as e:
@@ -286,10 +286,12 @@ class CausalService:
             return node_names, edges
         for u, v in self.dag.edges():
             try:
-                u_name = node_names[int(u)]
-                v_name = node_names[int(v)]
-                edges.append({"source": u_name, "target": v_name})
-            except (IndexError, ValueError):
+                u_idx, v_idx = int(u), int(v)
+                if u_idx >= len(node_names) or v_idx >= len(node_names):
+                    logger.warning("DAG edge (%d, %d) exceeds node_names length %d; skipping.", u_idx, v_idx, len(node_names))
+                    continue
+                edges.append({"source": node_names[u_idx], "target": node_names[v_idx]})
+            except (ValueError, TypeError):
                 pass
         return node_names, edges
 

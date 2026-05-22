@@ -322,7 +322,8 @@ if "results" in st.session_state and st.session_state.results.get("cate") and st
     margin = max(0.3, abs(cate_val) * 0.15)
     ci_lo = cate_resp.get("ci_lower", [cate_val - margin])[0]
     ci_hi = cate_resp.get("ci_upper", [cate_val + margin])[0]
-    magnitude = cate_resp.get("magnitude", ["moderate" if abs(cate_val) >= 2 else "small"])[0]
+    mag_list = cate_resp.get("magnitude", ["moderate" if abs(cate_val) >= 2 else "small"])
+    magnitude = mag_list[0] if mag_list else "small"
     confidence = cate_resp.get("confidence_pct", [80])[0]
     rec = policy_resp["recommended_treatment"][0]
     rec_label = "Treat (T=1)" if rec == 1 else "Withhold (T=0)"
@@ -419,7 +420,7 @@ if "results" in st.session_state and st.session_state.results.get("cate") and st
 
     elif view == "④ Details":
         st.subheader("Patient summary")
-        patient_id = f"P-{int(R['age']):03d}{int(R['bp']):03d}{R['comorbidities']}"
+        patient_id = f"P-{int(R['age']):03d}{int(R['bp']):03d}{int(R['comorbidities']):02d}"
         d1, d2, d3, d4 = st.columns(4)
         d1.metric("Patient ID", patient_id)
         d2.metric("Age", f"{int(R['age'])} yrs")

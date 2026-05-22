@@ -100,12 +100,15 @@ def notears_linear(
     ]
 
     for iteration in range(max_iter):
-        w_new, h_new = None, None
+        w_new, h_new = w_est, h  # safe fallback if rho already >= rho_max
         while rho < rho_max:
             sol = sopt.minimize(
                 _func, w_est, method="L-BFGS-B", jac=True, bounds=bnds
             )
             w_new = sol.x
+            if np.any(np.isnan(w_new)) or np.any(np.isinf(w_new)):
+                logger.error("NaN/Inf in optimization result at iteration %d; stopping.", iteration)
+                break
             h_new, _ = _h(_adj(w_new))
             if h_new > 0.25 * h:
                 rho *= 10.0

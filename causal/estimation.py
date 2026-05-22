@@ -58,7 +58,7 @@ class CustomDRLearner:
 
         num_clipped = int(((e < 0.05) | (e > 0.95)).sum())
         if num_clipped > 0:
-            print(f"Warning: {num_clipped} units had extreme propensity scores and were clipped.")
+            logger.warning(f"{num_clipped} units had extreme propensity scores and were clipped to [0.05, 0.95].")
 
         e = np.clip(e, 0.05, 0.95)
 
@@ -80,7 +80,8 @@ class CustomDRLearner:
                 mod1.fit(X_tr_s[mask1], Y_train[mask1])
                 mu1[test_idx] = mod1.predict(X_te_s)
             else:
-                mu1[test_idx] = Y_train[T_train == 1].mean() if (T_train == 1).any() else 0.0
+                fallback1 = float(Y_train[T_train == 1].mean()) if (T_train == 1).any() else 0.0
+                mu1[test_idx] = np.full(len(test_idx), fallback1)
 
             mask0 = T_train == 0
             if mask0.sum() > 0:
@@ -88,7 +89,8 @@ class CustomDRLearner:
                 mod0.fit(X_tr_s[mask0], Y_train[mask0])
                 mu0[test_idx] = mod0.predict(X_te_s)
             else:
-                mu0[test_idx] = Y_train[T_train == 0].mean() if (T_train == 0).any() else 0.0
+                fallback0 = float(Y_train[T_train == 0].mean()) if (T_train == 0).any() else 0.0
+                mu0[test_idx] = np.full(len(test_idx), fallback0)
 
         # Augmented IPW (doubly-robust) scores
         dr_i = (mu1 - mu0) + T * (Y - mu1) / e - (1 - T) * (Y - mu0) / (1 - e)

@@ -96,7 +96,8 @@ def process_mimic_data(raw_dir: str, out_path: str):
         cohort[col] = cohort[col].fillna(cohort[col].median())
         
     for col in cat_cols:
-        cohort[col] = cohort[col].fillna(cohort[col].mode()[0])
+        mode_val = cohort[col].mode()
+        cohort[col] = cohort[col].fillna(mode_val.iloc[0] if len(mode_val) > 0 else "")
         
     # Categorical encoding
     cohort = pd.get_dummies(cohort, columns=['GENDER', 'ADMISSION_TYPE'], drop_first=True)

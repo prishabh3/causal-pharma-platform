@@ -36,7 +36,7 @@ class LinUCB:
             expected_reward = (theta_a.T @ x)[0, 0]
             p[a] = expected_reward + cb
             
-        return np.argmax(p)
+        return int(np.argmax(p))
         
     def update(self, chosen_arm, x, reward):
         """
