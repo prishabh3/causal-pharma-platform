@@ -16,6 +16,7 @@ ENV RPY2_CFFI_MODE=ABI
 RUN pip install --no-cache-dir -r requirements-backend.txt
 
 # Copy the application source code
+COPY config.py /app/config.py
 COPY backend/ /app/backend/
 COPY causal/ /app/causal/
 COPY data/ /app/data/
@@ -29,4 +30,4 @@ RUN mkdir -p /app/data/raw
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/backend", "--reload-dir", "/app/causal", "--reload-dir", "/app/data", "--reload-dir", "/app/explainability"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
