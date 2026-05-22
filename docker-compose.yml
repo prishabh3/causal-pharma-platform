@@ -2,29 +2,30 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_USER: causal_user
-      POSTGRES_PASSWORD: causal_password
-      POSTGRES_DB: causal_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U causal_user -d causal_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
 
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.10.2
+    build:
+      context: .
+      dockerfile: mlflow/Dockerfile
     command: >
-      sh -c "pip install psycopg2-binary --quiet &&
-             mlflow server
-               --host 0.0.0.0
-               --port 5000
-               --backend-store-uri postgresql://causal_user:causal_password@db:5432/causal_db
-               --default-artifact-root /mlflow/artifacts"
+      mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri ${DATABASE_URL}
+        --default-artifact-root /mlflow/artifacts
     ports:
       - "5001:5000"
     depends_on:
@@ -45,8 +46,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://causal_user:causal_password@db:5432/causal_db
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - DATABASE_URL=${DATABASE_URL}
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI}
       - PYTHONUNBUFFERED=1
     # Only wait for DB — mlflow slowness should not block the API from starting
     depends_on:
@@ -72,7 +73,7 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - BACKEND_URL=http://backend:8000
+      - BACKEND_URL=${BACKEND_URL}
     # Only wait for backend to be healthy
     depends_on:
       backend:

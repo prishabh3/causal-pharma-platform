@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install python dependencies separately for better Docker layer caching
 COPY backend/requirements.txt ./requirements-backend.txt
+ENV RPY2_CFFI_MODE=ABI
 RUN pip install --no-cache-dir -r requirements-backend.txt
 
 # Copy the application source code
